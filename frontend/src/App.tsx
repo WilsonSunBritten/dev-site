@@ -1,10 +1,34 @@
-import React from 'react';
-import { withAuthenticator } from '@aws-amplify/ui-react';
-import { useCardFeatures } from './hooks/useCardFeatures';
-import '@aws-amplify/ui-react/styles.css';
+import React, { useState, useEffect } from 'react';
+import { API } from 'aws-amplify';
+
+interface CardFeature {
+  featureId: string;
+  name: string;
+  description: string;
+  permission: string;
+}
 
 const App: React.FC = () => {
-  const { features, loading, error } = useCardFeatures();
+  const [features, setFeatures] = useState<CardFeature[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchFeatures();
+  }, []);
+
+  const fetchFeatures = async () => {
+    try {
+      setLoading(true);
+      const response = await API.get('CardFeaturesAPI', '/features', {});
+      setFeatures(response);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching features:', err);
+      setError('Failed to fetch features');
+      setLoading(false);
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -23,4 +47,4 @@ const App: React.FC = () => {
   );
 };
 
-export default withAuthenticator(App);
+export default App;

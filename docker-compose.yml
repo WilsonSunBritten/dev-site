@@ -1,0 +1,56 @@
+version: '3.8'
+
+networks:
+  card-features-network:
+    driver: bridge
+
+services:
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
+    image: localstack/localstack
+    networks:
+      - card-features-network
+    ports:
+      - "4566:4566"
+    environment:
+      - DEBUG=${DEBUG-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=lambda,apigateway,dynamodb,cloudformation
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    networks:
+      - card-features-network
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - localstack
+    environment:
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - LOCALSTACK_HOSTNAME=localstack
+      - LAMBDA_ENDPOINT_URL=http://localstack:4566
+      - APIGATEWAY_ENDPOINT_URL=http://localstack:4566
+      - DYNAMODB_ENDPOINT_URL=http://localstack:4566
+
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      networks:
+        - card-features-network
+      ports:
+        - "3000:80"
+      environment:
+        - REACT_APP_API_URL=http://localstack:4566/restapis/placeholder/Prod/_user_request_
+        - REACT_APP_COGNITO_REGION=us-east-1
+        - REACT_APP_COGNITO_USER_POOL_ID=local_cognito_user_pool
+        - REACT_APP_COGNITO_APP_CLIENT_ID=local_cognito_client
+      depends_on:
+        - backend

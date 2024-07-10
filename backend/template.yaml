@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Card Features Backend with Dynamic Function Discovery
+
+Parameters:
+  CardFeaturesTableName:
+    Type: String
+    Description: Name for the DynamoDB Card Features Table
+    Default: CardFeatures
+
+Resources:
+  CardFeaturesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref CardFeaturesTableName
+      AttributeDefinitions:
+        - AttributeName: featureId
+          AttributeType: S
+        - AttributeName: permission
+          AttributeType: S
+      KeySchema:
+        - AttributeName: featureId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: PermissionIndex
+          KeySchema:
+            - AttributeName: permission
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+
+Outputs:
+  ApiGatewayUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "http://localhost:4566/restapis/${ApiGateway}/Prod"
+  CardFeaturesTableName:
+    Description: "Name of the DynamoDB Card Features Table"
+    Value: !Ref CardFeaturesTable
